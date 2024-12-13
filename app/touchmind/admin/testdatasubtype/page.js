@@ -1,0 +1,140 @@
+"use client";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { api } from "@/envfile/api";
+import { getCookie } from "cookies-next";
+import Listingpage4cols from "@/app/src/components/ListingPageComponents/Listingpage4cols";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  clearAllEditRecordIds,
+  resetDeleteStatus,
+  setPageNumber,
+} from "@/app/src/Redux/Slice/slice";
+
+const testdatasubtype = () => {
+  const [token, setToken] = useState("");
+  const [testdatasubtypes, setTestdatasubtypes] = useState([]);
+  const [sizePerPage, setSizePerPage] = useState(50);
+  const [totalRecord, setTotalRecord] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const fetchFilterInputs = useSelector(
+    (state) => state.tasks.fetchFilterInput
+  );
+  const fields = [
+    { label: "Identifier", value: "identifier" },
+    { label: "Short Description", value: "shortDescription" },
+    { label: "Test Data Type", value: "testDataType" },
+    { label: "Subsidiary ", value: "subsidiaries" },
+  ];
+
+  useEffect(() => {
+    const jwtToken = getCookie("jwtToken");
+    if (jwtToken) {
+      setToken(jwtToken);
+      dispatch(clearAllEditRecordIds());
+    }
+  }, []);
+  const dispatch = useDispatch();
+  const deleteStatus = useSelector((state) => state.tasks.deleteStatus);
+  const currentpageNumber = useSelector((state) => state.tasks.pageNumber);
+
+  useEffect(() => {
+    if (token) {
+      fetchTestdatasubtype();
+    }
+    if (deleteStatus === "deleted") {
+      fetchTestdatasubtype();
+      dispatch(resetDeleteStatus()); // Reset deleteStatus after the data is fetched
+    }
+  }, [token, currentpageNumber, sizePerPage, fetchFilterInputs, deleteStatus]);
+
+  const fetchTestdatasubtype = async () => {
+    setLoading(true);
+    setError(null); // Reset error before fetching
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      const body = {
+        page: currentpageNumber,
+        sizePerPage: sizePerPage === totalRecord ? totalRecord : sizePerPage,
+        // ...(fetchFilterInputs.length === 0 && { page: currentpageNumber }),
+        testDataSubtypes: fetchFilterInputs,
+      };
+      const response = await axios.post(`${api}/admin/testdatasubtype`, body, {
+        headers,
+      });
+
+      setTestdatasubtypes(response.data.testDataSubtypes || []);
+      setTotalRecord(response.data.totalRecords);
+      setTotalPages(response.data.totalPages);
+      setLoading(false);
+    } catch (err) {
+      setError("Error fetching testDataType data");
+    }
+  };
+
+  const handlePageChange = (newPage) => {
+    dispatch(setPageNumber(newPage));
+  };
+
+  const handleSizeChange = (event) => {
+    const selectedSize = event.target.value;
+    if (selectedSize === "all") {
+      setSizePerPage(totalRecord); // Set to totalRecord to fetch all items
+    } else {
+      setSizePerPage(parseInt(selectedSize)); // Convert string to number
+    }
+  };
+
+  const addnewroutepath = "/admin/testdatasubtype/add-testDataSubtype";
+  const breadscrums = "Admin > testdatasubtype";
+  const cuurentpagemodelname = "testdatasubtype";
+  const editnewroutepath = "/admin/testdatasubtype/edit-testdatasubtype";
+  const aresuremodal = "delete this items?";
+  const exportDownloadContent = [
+    { value: "status", label: "Status" },
+    { value: "node", label: "Node" },
+    { value: "sourceTargetParamMappings", label: "SourceTargetParamMappings" },
+    { value: "dataRelation", label: "DataRelation" },
+    { value: "subsidiaries", label: "Subsidiaries" },
+    { value: "shortDescription", label: "ShortDescription" },
+    { value: "identifier", label: "Identifier" },
+  ];
+  const aresuremodaltype = "Delete";
+  const apiroutepath = "testdatasubtype";
+  const deleteKeyField = "testDataSubtypes";
+
+  const startRecord = currentpageNumber * sizePerPage + 1;
+  const endRecord = Math.min(startRecord + sizePerPage - 1, totalRecord);
+
+  return (
+    <div>
+      {error && <div className="text-red-500 text-sm">{error}</div>}
+      <Listingpage4cols
+        cuurentpagemodelname={cuurentpagemodelname}
+        breadscrums={breadscrums}
+        addnewroutepath={addnewroutepath}
+        fields={fields} // Pass the field configuration
+        data={testdatasubtypes}
+        currentPage={currentpageNumber}
+        sizePerPage={sizePerPage}
+        totalPages={totalPages}
+        totalRecord={totalRecord}
+        onPageChange={handlePageChange}
+        onSizeChange={handleSizeChange}
+        loading={loading}
+        startRecord={startRecord} // Pass calculated startRecord
+        endRecord={endRecord} // Pass calculated endRecord
+        aresuremodal={aresuremodal}
+        aresuremodaltype={aresuremodaltype}
+        editnewroutepath={editnewroutepath}
+        apiroutepath={apiroutepath}
+        exportDownloadContent={exportDownloadContent}
+        deleteKeyField={deleteKeyField}
+      />
+    </div>
+  );
+};
+
+export default testdatasubtype;
