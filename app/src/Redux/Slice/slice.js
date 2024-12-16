@@ -14,8 +14,12 @@ const initialState = {
   toolkitRoutePath:"",
   highlightSearchQuery:"",
   pageNumber: 0,
-  configureListingPageModal:[]
+  configureListingPageModal:[],
+  searchInputField : false,
+  searchValues: {}, // To store search inputs
+addressSearchBar :""
 };
+
 
 const userSlice = createSlice({
   name: "zero",
@@ -31,8 +35,13 @@ const userSlice = createSlice({
       state.advanceSearch = {};
     },
     sethighlightSearchQuery: (state, { payload }) => {
-      state.highlightSearchQuery = payload;
+      if (state.highlightSearchQuery === payload) {
+        state.highlightSearchQuery = ""; // Reset to empty if the same recordId is passed
+      } else {
+        state.highlightSearchQuery = payload; // Set the new recordId
+      }
     },
+    
     setFilterInputValueEmpty: (state, { payload }) => {
       state.fetchFilterInput =[];
     },
@@ -118,7 +127,19 @@ const userSlice = createSlice({
     },
     setConfigureListingPageModal: (state, { payload }) => {
       state.configureListingPageModal = payload; // Update the page
-    }
+    },
+    setsearchInputField : (state, { payload }) => {
+      state.searchInputField = payload; // Update the page
+    },
+    setSearchValues(state, action) {
+      state.searchValues = action.payload;
+    },
+    clearSearchValues(state) {
+      state.searchValues = {};
+    },
+    setaddressSearchBar(state, action) {
+      state.addressSearchBar = action.payload;
+    },
   },
 });
 
@@ -145,5 +166,8 @@ export const {
   resetAdvanceFilterValue,
   sethighlightSearchQuery,
   setEmptyReloadSavedQuery,
-  setReloadSavedQuery
+  setReloadSavedQuery,
+  setsearchInputField,
+  setSearchValues, clearSearchValues,
+  setaddressSearchBar
 } = userSlice.actions;

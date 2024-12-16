@@ -173,7 +173,7 @@ const Listingpageforeppsso = ({
 
       if (response.data.message) {
         toast.success("Multiple Data deleted successfully!!");
-        // router.push(`/touchmind${homeroutepath}`);
+        // router.push(`/cheil${homeroutepath}`);
         window.location.reload();
       }
       window.location.reload();

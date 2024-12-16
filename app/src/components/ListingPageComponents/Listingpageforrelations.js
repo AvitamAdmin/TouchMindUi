@@ -186,7 +186,7 @@ const Listingpageforrelation = ({
 
       if (response.data.message) {
         toast.success("Multiple Data deleted successfully!!");
-        // router.push(`/touchmind${homeroutepath}`);
+        // router.push(`/cheil${homeroutepath}`);
         window.location.reload();
       }
       window.location.reload();
@@ -239,7 +239,7 @@ const Listingpageforrelation = ({
           </div>
           <div
             onClick={() => {
-              router.push(`/touchmind${addnewroutepath}`);
+              router.push(`/cheil${addnewroutepath}`);
             }}
             className="flex flex-row p-2 border-2 border-gray-400 text-center cursor-pointer items-center rounded-md bg-[#CC0001] gap-1"
           >

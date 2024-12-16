@@ -229,7 +229,7 @@ const Listingpageformedia = ({
                 dispatch(setMultipleEditRecoedId(recordId)); // Handle double tap action
             }
             // Navigate to the edit route
-            router.push(`/touchmind${editnewroutepath}`);
+            router.push(`/cheil${editnewroutepath}`);
         } else {
 
             // Single tap - set a timeout to distinguish between single and double tap
@@ -502,7 +502,7 @@ const Listingpageformedia = ({
                     </div>
                     <div
                         onClick={() => {
-                            router.push(`/touchmind${addnewroutepath}`);
+                            router.push(`/cheil${addnewroutepath}`);
                         }}
                         className="flex flex-row p-2 border-2 border-gray-400 text-center cursor-pointer items-center rounded-md bg-[#CC0001] gap-1"
                     >

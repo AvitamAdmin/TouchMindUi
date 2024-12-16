@@ -16,6 +16,10 @@ import {
   triggerDeleteSuccess,
   clearAllEditRecordIds,
   resetAdvanceFilterValue,
+  setsearchInputField,
+  setFilterInputValueEmpty,
+  setSearchValues,
+  clearSearchValues,
 } from "../../Redux/Slice/slice";
 import AdminEditButton from "../modal/AdminEditbutton";
 import { MdOutlineKeyboardDoubleArrowRight } from "react-icons/md";
@@ -61,7 +65,7 @@ const Listingpage3cols = ({
 }) => {
   const router = useRouter();
   const dispatch = useDispatch();
-  const [showInputs, setShowInputs] = useState(false);
+  // const [showInputs, setShowInputs] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -70,12 +74,34 @@ const Listingpage3cols = ({
   const [isConfigureListingModal, setIsConfigureListingModal] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isMultipleModalOpen, setIsMultipleModalOpen] = useState(false);
-  const [savedquery, setsavedquery] = useState(false);
   const [token, setToken] = useState("");
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [savedQuery, setsavedQuery] = useState([]);
   const configureListingPageModal = useSelector(
     (state) => state.tasks.configureListingPageModal
+  );
+  console.log(
+    configureListingPageModal,
+    "configureListingPageModal configureListingPageModalconfigureListingPageModal "
+  );
+  const showInputs = useSelector((state) => state.tasks.searchInputField);
+
+  const [localSearchValues, setLocalSearchValues] = useState(
+    fields.reduce((acc, field) => {
+      acc[field.attribute] = ""; // Use field.attribute here
+      return acc;
+    }, {})
+  );
+  const storedSearchValues = useSelector((state) => state.tasks.searchValues);
+  useEffect(() => {
+    setLocalSearchValues(storedSearchValues);
+  }, [storedSearchValues]);
+
+  //advance search implement and skip the save button in advanceSearchInputs
+  const [savedQueryrecordId, setsavedQueryrecordId] = useState([]);
+  const [savedquery, setsavedquery] = useState(false);
+  const advanceSearchInputs = useSelector((state) => state.tasks.advanceSearch);
+  const highlightSearchQuery = useSelector(
+    (state) => state.tasks.highlightSearchQuery
   );
   // Calculate the range of visible page numbers
   const getVisiblePages = () => {
@@ -96,7 +122,7 @@ const Listingpage3cols = ({
       setToken(jwtToken);
       getSavedqueryData(jwtToken);
     }
-  }, []);
+  }, [highlightSearchQuery]);
   const openModal = () => {
     setIsModalOpen(true);
   };
@@ -133,12 +159,6 @@ const Listingpage3cols = ({
   const closeAdvanceSearchModal = () => {
     setIsAdvanceSearchModalOpen(false);
   };
-  const [searchValues, setSearchValues] = useState(
-    fields.reduce((acc, field) => {
-      acc[field.value] = "";
-      return acc;
-    }, {})
-  );
 
   // useEffect(() => {
   //   if (Object.keys(searchValues).length === 0) {
@@ -165,7 +185,6 @@ const Listingpage3cols = ({
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editModalData, setEditModalData] = useState(null);
 
-  const toggleInputs = () => setShowInputs(!showInputs);
   const pageNumbers = Array.from(
     { length: totalPages },
     (_, index) => index + 1
@@ -184,21 +203,26 @@ const Listingpage3cols = ({
   };
 
   const handleSearchChange = (e, field) => {
-    if (!e || !e.target || !field || !field.value) {
+    if (!e || !e.target || !field || !field.attribute) {
       return; // Safeguard in case e or field is undefined
     }
-
-    const newSearchValues = { ...searchValues, [field.value]: e.target.value };
-    setSearchValues(newSearchValues);
+    
+    const newSearchValues = {
+      ...localSearchValues,
+      [field.attribute]: e.target.value,
+    };
+    setLocalSearchValues(newSearchValues);
 
     const message = {};
     fields.forEach((f) => {
-      if (newSearchValues[f.value]?.trim()) {
-        message[f.value] = newSearchValues[f.value];
+      if (newSearchValues[f.attribute]?.trim()) {
+        message[f.attribute] = newSearchValues[f.attribute]; // Use field.attribute
       }
     });
     dispatch(getFilterInputValue(message));
-    setShowInputs(true);
+    dispatch(setsearchInputField(true));
+    dispatch(setSearchValues(newSearchValues));
+
     console.log("Updated message object for API request:", message);
   };
 
@@ -246,7 +270,7 @@ const Listingpage3cols = ({
         dispatch(setMultipleEditRecoedId(recordId)); // Handle double tap action
       }
       // Navigate to the edit route
-      router.push(`/touchmind${editnewroutepath}`);
+      router.push(`/cheil${editnewroutepath}`);
     } else {
       // Single tap - set a timeout to distinguish between single and double tap
       tapTimeout = setTimeout(() => {
@@ -372,238 +396,161 @@ const Listingpage3cols = ({
       setError("Error fetching export URL");
     }
   };
-  const advanceSearchInputs = useSelector((state) => state.tasks.advanceSearch);
-console.log(advanceSearchInputs,"advanceSearchInputs advanceSearchInputs advanceSearchInputs");
 
-
-const getSavedqueryData = async (jwtToken) => {
-  const headers = { Authorization: `Bearer ${jwtToken}` };
-  const body = {
-    page: 0,
-    sizePerPage: 50,
+  //advance search implement and skip the save button in advanceSearchInputs
+  console.log(
+    advanceSearchInputs,
+    "advanceSearchInputs advanceSearchInputs advanceSearchInputs"
+  );
+  const getSavedqueryData = async (jwtToken) => {
+    const headers = { Authorization: `Bearer ${jwtToken}` };
+    const body = {
+      page: 0,
+      sizePerPage: 50,
+    };
+    const response = await axios.post(`${api}/admin/${apiroutepath}`, body, {
+      headers,
+    });
+    const recordIds = response.data.savedQuery?.map((query) => query.recordId);
+    setsavedQueryrecordId(recordIds);
+    console.log(response.data.savedQuery, "savedQuery savedQuery");
   };
-  const response = await axios.post(`${api}/admin/${apiroutepath}`, body, {
-    headers,
-  });
-  const apiResponse = response.data.savedQuery;
-  setsavedQuery(response.data.savedQuery);
-  console.log(response.data.savedQuery, "savedQuery savedQuery");
-};
 
+  // useEffect(() => {
+  //   dispatch(setFilterInputValueEmpty()); // Execute only if there are non-empty values
+  //   dispatch(setsearchInputField(false)); // Always execute
+  //   dispatch(clearSearchValues()); // Always clear Redux state
 
+  //   // Clear local state
+  //   setLocalSearchValues(
+  //     fields.reduce((acc, field) => {
+  //       acc[field.attribute] = ""; // Reset all input fields
+  //       return acc;
+  //     }, {}))
+  // }, []);
   return (
     <div className="w-[100%] overflow-hidden flex flex-col px-2 gap-3 pb-5  h-[100%]">
       <Toaster />
       <div className="py-1 rounded-md flex flex-col justify-between items-center w-full">
-      <div className="flex flex-row gap-1 w-full text-start py-2">
-            <span className="text-xs font-bold">{breadscrums}</span>
-          </div>
-        <div className="flex flex-row gap-3 w-full justify-between items-center">
-          
-         <div className="flex flex-row gap-5  p-2 rounded-md">
-        
-          <div className="flex flex-row gap-2 items-center justify-center text-sm">
-          <div className="flex flex-row gap-2 ">
-            Showing
-            <div className=" flex flex-row gap-2">
-              <span className="  text-center flex bg-[#cc0001] rounded-sm text-white flex-row w-[25px] justify-center ">
-                {startRecord}
-              </span>
-              -
-              <span className="  flex flex-row w-[27px] bg-[#cc0001] rounded-sm text-white justify-center ">
-                {endRecord}
-              </span>
-            </div>
-            of {totalRecord} Entries
-          </div>
-          <TextField
-          variant="standard"
-            className="w-[55px] text-sm"
-            size="small"
-            id="outlined-select-currency-native"
-            select
-            value={sizePerPage === "all" ? "Show All" : sizePerPage.toString()}
-            onChange={onSizeChange}
-          >
-            {filter.map((option) => (
-              <MenuItem
-                key={option.value}
-                value={option.sizePerPage.toString()}
-                className="text-sm"
-              >
-                {option.value}
-              </MenuItem>
-            ))}
-          </TextField>
+        <div className="flex flex-row gap-1 w-full text-start py-2">
+          <span className="text-xs font-bold">{breadscrums}</span>
         </div>
-        <div>
-            {totalPages > 0 && (
-              <div className="flex space-x-2  justify-start items-center p-2 rounded-md">
-                {/* Double arrow button to go to the first page */}
-                <div
-                  onClick={() => onPageChange(0)}
-                  disabled={currentPage === 0}
-                  className="w-[25px] py-0.5 rounded text-center cursor-pointer bg-[#D3D3D3] items-center justify-center flex flex-row text-gray-700 text-sm"
-                >
-                  <MdOutlineKeyboardDoubleArrowLeft className="text-lg" />
+        <div className="flex flex-row gap-3 w-full justify-between items-center">
+          <div className="flex flex-row gap-5  p-2 rounded-md">
+            <div className="flex flex-row gap-2 items-center justify-center text-sm">
+              <div className="flex flex-row gap-2 ">
+                Showing
+                <div className=" flex flex-row gap-2">
+                  <span className="  text-center flex bg-[#cc0001] rounded-sm text-white flex-row w-[25px] justify-center ">
+                    {startRecord}
+                  </span>
+                  -
+                  <span className="  flex flex-row w-[27px] bg-[#cc0001] rounded-sm text-white justify-center ">
+                    {endRecord}
+                  </span>
                 </div>
-
-                {/* Single arrow button to go to the previous page */}
-                <div
-                  onClick={() => onPageChange(currentPage - 1)}
-                  disabled={currentPage === 0}
-                  className="w-[25px] py-0.5 rounded text-center cursor-pointer bg-[#D3D3D3] items-center justify-center flex flex-row text-gray-700 text-sm"
-                >
-                  <MdOutlineKeyboardArrowLeft className="text-lg" />
-                </div>
-
-                {/* Render visible page numbers dynamically */}
-                {visiblePages.map((pageNum) => (
-                  <div
-                    key={pageNum}
-                    className={`w-[25px] py-0.5 rounded ${
-                      pageNum - 1 === currentPage
-                        ? "bg-[#cc0001] text-white text-center cursor-pointer"
-                        : "bg-[#D3D3D3] text-gray-700 text-center cursor-pointer"
-                    } text-sm`}
-                    onClick={() => onPageChange(pageNum - 1)}
-                  >
-                    {pageNum}
-                  </div>
-                ))}
-
-                {/* Single arrow button to go to the next page */}
-                <div
-                  onClick={() => onPageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages - 1}
-                  className="w-[25px] py-0.5 rounded text-center cursor-pointer bg-[#D3D3D3] items-center justify-center flex flex-row text-gray-700 text-sm"
-                >
-                  <MdOutlineKeyboardArrowRight className="text-lg" />
-                </div>
-
-                {/* Double arrow button to go to the last page */}
-                <div
-                  onClick={() => onPageChange(totalPages - 1)}
-                  disabled={currentPage === totalPages - 1}
-                  className="w-[25px] py-0.5 rounded text-center cursor-pointer bg-[#D3D3D3] items-center justify-center flex flex-row text-gray-700 text-sm"
-                >
-                  <MdOutlineKeyboardDoubleArrowRight className="text-lg" />
-                </div>
+                of {totalRecord} Entries
               </div>
-            )}
+              <TextField
+                variant="standard"
+                className="w-[55px]fus text-sm"
+                size="small"
+                id="outlined-select-currency-native"
+                select
+                value={
+                  sizePerPage === "all" ? "Show All" : sizePerPage.toString()
+                }
+                onChange={onSizeChange}
+              >
+                {filter.map((option) => (
+                  <MenuItem
+                    key={option.value}
+                    value={option.sizePerPage.toString()}
+                    className="text-sm"
+                  >
+                    {option.value}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </div>
+            <div>
+              {totalPages > 0 && (
+                <div className="flex space-x-2  justify-start items-center p-2 rounded-md">
+                  {/* Double arrow button to go to the first page */}
+                  <div
+                    onClick={() => onPageChange(0)}
+                    disabled={currentPage === 0}
+                    className="w-[25px] py-0.5 rounded text-center cursor-pointer bg-[#D3D3D3] items-center justify-center flex flex-row text-gray-700 text-sm"
+                  >
+                    <MdOutlineKeyboardDoubleArrowLeft className="text-lg" />
+                  </div>
+
+                  {/* Single arrow button to go to the previous page */}
+                  <div
+                    onClick={() => {
+                      if (currentPage > 0) {
+                        onPageChange(currentPage - 1);
+                      }
+                    }}
+                    disabled={currentPage === 0}
+                    className={`w-[25px] py-0.5 rounded text-center cursor-pointer ${
+                      currentPage === 0
+                        ? "bg-gray-300 cursor-not-allowed"
+                        : "bg-[#D3D3D3]"
+                    } items-center justify-center flex flex-row text-gray-700 text-sm`}
+                  >
+                    <MdOutlineKeyboardArrowLeft className="text-lg" />
+                  </div>
+
+                  {/* Render visible page numbers dynamically */}
+                  {visiblePages.map((pageNum) => (
+                    <div
+                      key={pageNum}
+                      className={`w-[25px] py-0.5 rounded ${
+                        pageNum - 1 === currentPage
+                          ? "bg-[#cc0001] text-white text-center cursor-pointer"
+                          : "bg-[#D3D3D3] text-gray-700 text-center cursor-pointer"
+                      } text-sm`}
+                      onClick={() => onPageChange(pageNum - 1)}
+                    >
+                      {pageNum}
+                    </div>
+                  ))}
+
+                  {/* Single arrow button to go to the next page */}
+                  <div
+                    onClick={() => {
+                      if (currentPage < totalPages - 1) {
+                        onPageChange(currentPage + 1);
+                      }
+                    }}
+                    disabled={currentPage === totalPages - 1}
+                    className={`w-[25px] py-0.5 rounded text-center cursor-pointer ${
+                      currentPage === totalPages - 1
+                        ? "bg-gray-300 cursor-not-allowed"
+                        : "bg-[#D3D3D3]"
+                    } items-center justify-center flex flex-row text-gray-700 text-sm`}
+                  >
+                    <MdOutlineKeyboardArrowRight className="text-lg" />
+                  </div>
+
+                  {/* Double arrow button to go to the last page */}
+                  <div
+                    onClick={() => onPageChange(totalPages - 1)}
+                    disabled={currentPage === totalPages - 1}
+                    className="w-[25px] py-0.5 rounded text-center cursor-pointer bg-[#D3D3D3] items-center justify-center flex flex-row text-gray-700 text-sm"
+                  >
+                    <MdOutlineKeyboardDoubleArrowRight className="text-lg" />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-         </div>
           <div className="flex flex-row  items-center">
-          <div
-            className="flex flex-row   "
-            onClick={() => setIsConfigureListingModal(true)}
-          >
-            <Tooltip
-              arrow
-              slotProps={{
-                popper: {
-                  modifiers: [
-                    {
-                      name: "offset",
-                      options: {
-                        offset: [0, -14], // Adjust tooltip position
-                      },
-                    },
-                  ],
-                },
-              }}
-              title="Configure"
+            <div
+              className="flex flex-row   "
+              onClick={() => setIsConfigureListingModal(true)}
             >
-              <IconButton>
-                <GrConfigure className="text-white bg-[#1C61A7] p-1.5 rounded-md text-3xl" />
-              </IconButton>
-            </Tooltip>
-          </div>
-          <div
-            className="flex flex-row   "
-            onClick={() => openAdvanceSearchModal()}
-          >
-            <Tooltip
-              arrow
-              slotProps={{
-                popper: {
-                  modifiers: [
-                    {
-                      name: "offset",
-                      options: {
-                        offset: [0, -14], // Adjust tooltip position
-                      },
-                    },
-                  ],
-                },
-              }}
-              title="Advanced Search"
-            >
-              <IconButton>
-                <FaSearchPlus className="text-white bg-[#1C61A7] p-1.5 rounded-md text-3xl" />
-              </IconButton>
-            </Tooltip>
-          </div>
-          <div className="flex flex-row ">
-            {!skipmultipleedit.includes(apiroutepath) ? (
-              // If not in skipmultipleedit, enable the edit button and check for selected items
-              selectedID.length >= 1 ? (
-                <div
-                  onClick={() => {
-                    router.push(`/touchmind${editnewroutepath}`);
-                  }}
-                >
-                  <Tooltip
-                    arrow
-                    slotProps={{
-                      popper: {
-                        modifiers: [
-                          {
-                            name: "offset",
-                            options: {
-                              offset: [0, -14],
-                            },
-                          },
-                        ],
-                      },
-                    }}
-                    title="Edit"
-                  >
-                    <IconButton>
-                      <MdOutlineEdit className="text-white bg-[#CC0001] p-1.5 rounded-md text-3xl " />
-                    </IconButton>
-                  </Tooltip>
-                </div>
-              ) : (
-                <div
-                  onClick={() => {
-                    toast.error("Select atleast one element to edit");
-                  }}
-                >
-                  <Tooltip
-                    arrow
-                    slotProps={{
-                      popper: {
-                        modifiers: [
-                          {
-                            name: "offset",
-                            options: {
-                              offset: [0, -14],
-                            },
-                          },
-                        ],
-                      },
-                    }}
-                    title="Edit"
-                  >
-                    <IconButton>
-                      <MdOutlineEdit className="text-white bg-[#CC0001] p-1.5 rounded-md text-3xl " />
-                    </IconButton>
-                  </Tooltip>
-                </div>
-              )
-            ) : (
-              // If apiroutepath is in skipmultipleedit, show a disabled button
               <Tooltip
                 arrow
                 slotProps={{
@@ -612,34 +559,104 @@ const getSavedqueryData = async (jwtToken) => {
                       {
                         name: "offset",
                         options: {
-                          offset: [0, -14],
+                          offset: [0, -14], // Adjust tooltip position
                         },
                       },
                     ],
                   },
                 }}
-                title={`Multiple edit is disabled for ${cuurentpagemodelname}`}
+                title="Configure"
               >
-                <span>
-                  <IconButton disabled>
-                    <MdOutlineEdit
-                      style={{
-                        cursor: "not-allowed",
-                      }}
-                      className="text-white  bg-gray-400 p-1.5 rounded-md text-3xl "
-                    />
-                  </IconButton>
-                </span>
+                <IconButton>
+                  <GrConfigure className="text-white bg-[#1C61A7] p-1.5 rounded-md text-3xl" />
+                </IconButton>
               </Tooltip>
-            )}
-          </div>
-          <div className="flex flex-row ">
-            {selectedMultipleID.length >= 1 ? (
-              <div
-                onClick={() => {
-                  openMultipleModal(); // Open the delete confirmation modal
+            </div>
+            <div
+              className="flex flex-row   "
+              onClick={() => openAdvanceSearchModal()}
+            >
+              <Tooltip
+                arrow
+                slotProps={{
+                  popper: {
+                    modifiers: [
+                      {
+                        name: "offset",
+                        options: {
+                          offset: [0, -14], // Adjust tooltip position
+                        },
+                      },
+                    ],
+                  },
                 }}
+                title="Advanced Search"
               >
+                <IconButton>
+                  <FaSearchPlus className="text-white bg-[#1C61A7] p-1.5 rounded-md text-3xl" />
+                </IconButton>
+              </Tooltip>
+            </div>
+            <div className="flex flex-row ">
+              {!skipmultipleedit.includes(apiroutepath) ? (
+                // If not in skipmultipleedit, enable the edit button and check for selected items
+                selectedID.length >= 1 ? (
+                  <div
+                    onClick={() => {
+                      router.push(`/cheil${editnewroutepath}`);
+                    }}
+                  >
+                    <Tooltip
+                      arrow
+                      slotProps={{
+                        popper: {
+                          modifiers: [
+                            {
+                              name: "offset",
+                              options: {
+                                offset: [0, -14],
+                              },
+                            },
+                          ],
+                        },
+                      }}
+                      title="Edit"
+                    >
+                      <IconButton>
+                        <MdOutlineEdit className="text-white bg-[#CC0001] p-1.5 rounded-md text-3xl " />
+                      </IconButton>
+                    </Tooltip>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => {
+                      toast.error("Select atleast one element to edit");
+                    }}
+                  >
+                    <Tooltip
+                      arrow
+                      slotProps={{
+                        popper: {
+                          modifiers: [
+                            {
+                              name: "offset",
+                              options: {
+                                offset: [0, -14],
+                              },
+                            },
+                          ],
+                        },
+                      }}
+                      title="Edit"
+                    >
+                      <IconButton>
+                        <MdOutlineEdit className="text-white bg-[#CC0001] p-1.5 rounded-md text-3xl " />
+                      </IconButton>
+                    </Tooltip>
+                  </div>
+                )
+              ) : (
+                // If apiroutepath is in skipmultipleedit, show a disabled button
                 <Tooltip
                   arrow
                   slotProps={{
@@ -648,183 +665,232 @@ const getSavedqueryData = async (jwtToken) => {
                         {
                           name: "offset",
                           options: {
-                            offset: [0, -14], // Adjust tooltip position
+                            offset: [0, -14],
                           },
                         },
                       ],
                     },
                   }}
-                  title="Delete"
+                  title={`Multiple edit is disabled for ${cuurentpagemodelname}`}
                 >
-                  <IconButton>
-                    <MdDelete className="text-white bg-[#CC0001] p-1.5 rounded-md text-3xl" />
-                  </IconButton>
+                  <span>
+                    <IconButton disabled>
+                      <MdOutlineEdit
+                        style={{
+                          cursor: "not-allowed",
+                        }}
+                        className="text-white  bg-gray-400 p-1.5 rounded-md text-3xl "
+                      />
+                    </IconButton>
+                  </span>
                 </Tooltip>
-              </div>
-            ) : (
-              <div
-                onClick={() => {
-                  toast.error("Select atleast one element to delete"); // Show error if no item is selected
+              )}
+            </div>
+            <div className="flex flex-row ">
+              {selectedMultipleID.length >= 1 ? (
+                <div
+                  onClick={() => {
+                    openMultipleModal(); // Open the delete confirmation modal
+                  }}
+                >
+                  <Tooltip
+                    arrow
+                    slotProps={{
+                      popper: {
+                        modifiers: [
+                          {
+                            name: "offset",
+                            options: {
+                              offset: [0, -14], // Adjust tooltip position
+                            },
+                          },
+                        ],
+                      },
+                    }}
+                    title="Delete"
+                  >
+                    <IconButton>
+                      <MdDelete className="text-white bg-[#CC0001] p-1.5 rounded-md text-3xl" />
+                    </IconButton>
+                  </Tooltip>
+                </div>
+              ) : (
+                <div
+                  onClick={() => {
+                    toast.error("Select atleast one element to delete"); // Show error if no item is selected
+                  }}
+                >
+                  <Tooltip
+                    arrow
+                    slotProps={{
+                      popper: {
+                        modifiers: [
+                          {
+                            name: "offset",
+                            options: {
+                              offset: [0, -14], // Adjust tooltip position
+                            },
+                          },
+                        ],
+                      },
+                    }}
+                    title="Delete"
+                  >
+                    <IconButton>
+                      <MdDelete className="text-white bg-[#CC0001] p-1.5 rounded-md text-3xl" />
+                    </IconButton>
+                  </Tooltip>
+                </div>
+              )}
+            </div>
+            <div
+              onClick={() => {
+                router.push(`/cheil${addnewroutepath}`);
+              }}
+              className=""
+            >
+              <Tooltip
+                arrow
+                slotProps={{
+                  popper: {
+                    modifiers: [
+                      {
+                        name: "offset",
+                        options: {
+                          offset: [0, -14], // Adjust tooltip position
+                        },
+                      },
+                    ],
+                  },
                 }}
+                title="Add New"
               >
-                <Tooltip
-                  arrow
-                  slotProps={{
-                    popper: {
-                      modifiers: [
-                        {
-                          name: "offset",
-                          options: {
-                            offset: [0, -14], // Adjust tooltip position
-                          },
+                <IconButton>
+                  <FaPlus className="text-white bg-[#CC0001] p-1.5 rounded-md text-3xl" />
+                </IconButton>
+              </Tooltip>
+            </div>
+            <div
+              className=""
+              onClick={() => {
+                openExportModal();
+              }}
+            >
+              <Tooltip
+                arrow
+                slotProps={{
+                  popper: {
+                    modifiers: [
+                      {
+                        name: "offset",
+                        options: {
+                          offset: [0, -14], // Adjust tooltip position
                         },
-                      ],
-                    },
-                  }}
-                  title="Delete"
-                >
-                  <IconButton>
-                    <MdDelete className="text-white bg-[#CC0001] p-1.5 rounded-md text-3xl" />
-                  </IconButton>
-                </Tooltip>
-              </div>
-            )}
-          </div>
-          <div
-            onClick={() => {
-              router.push(`/touchmind${addnewroutepath}`);
-            }}
-            className=""
-          >
-            <Tooltip
-              arrow
-              slotProps={{
-                popper: {
-                  modifiers: [
-                    {
-                      name: "offset",
-                      options: {
-                        offset: [0, -14], // Adjust tooltip position
                       },
-                    },
-                  ],
-                },
-              }}
-              title="Add New"
-            >
-              <IconButton>
-                <FaPlus className="text-white bg-[#CC0001] p-1.5 rounded-md text-3xl" />
-              </IconButton>
-            </Tooltip>
-          </div>
-          <div
-            className=""
-            onClick={() => {
-              openExportModal();
-            }}
-          >
-            <Tooltip
-              arrow
-              slotProps={{
-                popper: {
-                  modifiers: [
-                    {
-                      name: "offset",
-                      options: {
-                        offset: [0, -14], // Adjust tooltip position
-                      },
-                    },
-                  ],
-                },
-              }}
-              title="Export"
-            >
-              <IconButton>
-                <MdFileUpload className="text-white bg-[#000] p-1.5 rounded-md text-3xl" />
-              </IconButton>
-            </Tooltip>
-          </div>
+                    ],
+                  },
+                }}
+                title="Export"
+              >
+                <IconButton>
+                  <MdFileUpload className="text-white bg-[#000] p-1.5 rounded-md text-3xl" />
+                </IconButton>
+              </Tooltip>
+            </div>
 
-          <div onClick={handleDownload} className="">
-            <Tooltip
-              arrow
-              slotProps={{
-                popper: {
-                  modifiers: [
-                    {
-                      name: "offset",
-                      options: {
-                        offset: [0, -14], // Adjust tooltip position
+            <div onClick={handleDownload} className="">
+              <Tooltip
+                arrow
+                slotProps={{
+                  popper: {
+                    modifiers: [
+                      {
+                        name: "offset",
+                        options: {
+                          offset: [0, -14], // Adjust tooltip position
+                        },
                       },
-                    },
-                  ],
-                },
+                    ],
+                  },
+                }}
+                title="Template"
+              >
+                <IconButton>
+                  <TbTemplate className="text-white bg-[#000] p-1.5 rounded-md text-3xl" />
+                </IconButton>
+              </Tooltip>
+            </div>
+            <div
+              onClick={() => {
+                setShowUploadModal(true);
               }}
-              title="Template"
+              // href="/cheil/admin/trgmapping/add-mapping"
+              className=""
             >
-              <IconButton>
-                <TbTemplate className="text-white bg-[#000] p-1.5 rounded-md text-3xl" />
-              </IconButton>
-            </Tooltip>
-          </div>
-          <div
-            onClick={() => {
-              setShowUploadModal(true);
-            }}
-            // href="/touchmind/admin/trgmapping/add-mapping"
-            className=""
-          >
-            <Tooltip
-              arrow
-              slotProps={{
-                popper: {
-                  modifiers: [
-                    {
-                      name: "offset",
-                      options: {
-                        offset: [0, -14], // Adjust tooltip position
+              <Tooltip
+                arrow
+                slotProps={{
+                  popper: {
+                    modifiers: [
+                      {
+                        name: "offset",
+                        options: {
+                          offset: [0, -14], // Adjust tooltip position
+                        },
                       },
-                    },
-                  ],
-                },
-              }}
-              title="Upload"
-            >
-              <IconButton>
-                <IoMdCloudUpload className="text-white bg-[#000] p-1.5 rounded-md text-3xl" />
-              </IconButton>
-            </Tooltip>
+                    ],
+                  },
+                }}
+                title="Upload"
+              >
+                <IconButton>
+                  <IoMdCloudUpload className="text-white bg-[#000] p-1.5 rounded-md text-3xl" />
+                </IconButton>
+              </Tooltip>
+            </div>
           </div>
         </div>
-        </div>
-        
       </div>
 
       {/* Search bar and inputs */}
 
       {advanceSearchInputs?.[deleteKeyField]?.length > 0 ? (
-  <div className="flex flex-row bg-blue-300 text-black font-semibold gap-10 p-2 rounded-md text-xs w-full justify-between items-center">
-   <div> Active Advanced Search : {" "}
-    {advanceSearchInputs[deleteKeyField]
-      .map((dataSource) =>
-        Object.entries(dataSource)
-          .map(([key, value]) => `${key} : ${value}`)
-          .join(", ")
-      )
-      .join(" | ")}{" "}
-    (Operator: {advanceSearchInputs.operator})</div>   <div className="flex flex-row gap-7">
-    <div className="bg-red-500 px-3 py-1 text-white rounded-md cursor-pointer" onClick={()=>{
-             dispatch(triggerDeleteSuccess());
-             dispatch(clearDeleteElementId());
-             dispatch(resetAdvanceFilterValue());
+        <div className="flex flex-row bg-blue-300 text-black font-semibold gap-10 p-2 rounded-md text-xs w-full justify-between items-center">
+          <div>
+            Active Advanced Search :{" "}
+            {advanceSearchInputs[deleteKeyField]
+              .map((dataSource) =>
+                Object.entries(dataSource)
+                  .map(([key, value]) => `${key} : ${value}`)
+                  .join(", ")
+              )
+              .join(" | ")}{" "}
+            (Operator: {advanceSearchInputs.operator})
+          </div>
+          <div className="flex flex-row gap-7">
+            <div
+              className="bg-red-500 px-3 py-1 text-white rounded-md cursor-pointer"
+              onClick={() => {
+                dispatch(triggerDeleteSuccess());
+                dispatch(clearDeleteElementId());
+                dispatch(resetAdvanceFilterValue());
+              }}
+            >
+              Reset
+            </div>
 
-    }}>Reset</div>
-    <div onClick={() => setsavedquery(true)} className="bg-green-500 px-3 py-1 text-white rounded-md cursor-pointer">Save</div>
-
-    </div>
-
-  </div>
-) : null}
+            {/* Conditionally render the Save button */}
+            {!savedQueryrecordId.includes(highlightSearchQuery) && (
+              <div
+                onClick={() => setsavedquery(true)}
+                className="bg-green-500 px-3 py-1 text-white rounded-md cursor-pointer"
+              >
+                Save
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
 
       <div className="bg-white  rounded-md ">
         <div className="gap-3 flex flex-col  rounded-md   overflow-y-auto">
@@ -834,7 +900,7 @@ const getSavedqueryData = async (jwtToken) => {
           >
             <div className="flex items-center w-full flex-row">
               <div className="flex flex-row w-full">
-                <div className="flex items-center gap-2 text-sm w-[5%]">
+                <div className="flex items-center gap-2  text-sm w-[4%]">
                   <input
                     type="checkbox"
                     checked={selectAll}
@@ -843,77 +909,105 @@ const getSavedqueryData = async (jwtToken) => {
                   {/* <span>Select All</span> */}
                 </div>
 
-                {!showInputs ? (
-                  <div className="w-[90%] flex flex-row  justify-between items-center pt-2.5 pb-2.5">
+                {!showInputs === true ? (
+                  <div className="w-[91%]  flex flex-row  justify-between items-center pt-2.5 pb-2.5">
                     {configureListingPageModal.length > 1
                       ? configureListingPageModal.map((item, index) => (
                           <div
                             key={index}
-                            className="flex items-center gap-2 p-1 text-sm "
+                            className="flex items-center   gap-2 p-1 text-sm "
                             style={{
                               width: `${
-                                100 / configureListingPageModal.length
+                                90 / configureListingPageModal.length
                               }%`, // Dynamically calculate width
                             }}
                           >
-                            <span>{item.label}</span>
+                            <span className="">{item.label}</span>
                           </div>
                         ))
                       : fields.map((field, index) => (
                           <div
                             key={index}
-                            className="flex items-center gap-2 p-1 text-sm w-[33%]"
+                            className="flex items-center gap-2 p-1    text-sm "
+                            style={{
+                              width: `${90 / fields.length}%`, // Dynamically calculate width
+                            }}
                           >
-                            <span>{field.label}</span>
+                            <span className=" ">{field.label}</span>
                           </div>
                         ))}
                   </div>
                 ) : (
-                  <div className="flex flex-row w-full  justify-between items-start pt-2.5 pb-2.5">
+                  <div className="flex flex-row   w-[91%] justify-between items-start pt-2.5 pb-2.5">
                     {configureListingPageModal.length > 1
-                      ? configureListingPageModal.map((item, index) => (
+                      ? configureListingPageModal.map((field, index) => (
                           <div
                             key={index}
-                            className="flex items-center gap-2 text-sm "
+                            className="flex items-center  gap-2 text-sm "
                             style={{
                               width: `${
-                                100 / configureListingPageModal.length
+                                90 / configureListingPageModal.length
                               }%`, // Dynamically calculate width
                             }}
                           >
                             <input
-                              placeholder={`Search ${item.label}`}
-                              value={searchValues[item.value] || ""}
-                              onChange={(e) => handleSearchChange(e, item)}
-                              className="input-class text-sm flex items-start justify-start p-1"
+                              placeholder={`Search ${field.label}`}
+                              value={localSearchValues[field.attribute] || ""} // Use local state
+                              onChange={(e) => handleSearchChange(e, field)}
+                              className="input-class text-sm flex   items-start justify-start p-1"
                             />
                           </div>
                         ))
                       : fields.map((field, index) => (
                           <div
                             key={index}
-                            className="flex items-center gap-2 text-sm w-[33%]"
+                            className="flex items-center  gap-2 text-sm "
+                            style={{
+                              width: `${90 / fields.length}%`, // Dynamically calculate width
+                            }}
                           >
                             <input
                               placeholder={`Search ${field.label}`}
-                              value={searchValues[field.value] || ""}
+                              value={localSearchValues[field.attribute] || ""} // Use local state
                               onChange={(e) => handleSearchChange(e, field)}
-                              className="input-class text-sm flex items-start justify-start p-1"
+                              className="input-class text-sm flex   items-start justify-start p-1"
                             />
                           </div>
                         ))}
                   </div>
                 )}
-                <div className="flex flex-row items-center justify-end  gap-2 text-sm w-[5%]">
-                  {showInputs ? (
+                <div className="flex flex-row items-center  justify-end  gap-2 text-sm w-[5%]">
+                  {showInputs === true ? (
                     <IoClose
                       className="cursor-pointer"
-                      onClick={toggleInputs}
+                      onClick={() => {
+                        // Check if any input field is not empty
+                        const hasNonEmptyValues = Object.values(
+                          localSearchValues
+                        ).some((value) => value.trim() !== "");
+
+                        if (hasNonEmptyValues) {
+                          dispatch(setFilterInputValueEmpty()); // Execute only if there are non-empty values
+                        }
+
+                        dispatch(setsearchInputField(false)); // Always execute
+                        dispatch(clearSearchValues()); // Always clear Redux state
+
+                        // Clear local state
+                        setLocalSearchValues(
+                          fields.reduce((acc, field) => {
+                            acc[field.attribute] = ""; // Reset all input fields
+                            return acc;
+                          }, {})
+                        );
+                      }}
                     />
                   ) : (
                     <IoSearch
                       className="cursor-pointer"
-                      onClick={toggleInputs}
+                      onClick={() => {
+                        dispatch(setsearchInputField(true));
+                      }}
                     />
                   )}
                 </div>
@@ -924,7 +1018,7 @@ const getSavedqueryData = async (jwtToken) => {
           {/* Display the filtered data */}
           <div
             style={{ backgroundColor: "#fff" }}
-            className=" p-4 max-h-[490px] min-h-[490px] rounded-md overflow-y-scroll"
+            className=" pt-4  max-h-[490px] min-h-[490px] rounded-md overflow-y-scroll"
           >
             {loading ? (
               <div className="w-full flex flex-col  h-80 justify-center items-center">
@@ -943,9 +1037,9 @@ const getSavedqueryData = async (jwtToken) => {
                   data.map((item, index) => (
                     <div
                       key={index}
-                      className="flex items-center text-gray-600 text-xs w-full "
+                      className="flex items-center text-gray-600 hover:bg-gray-200 transition-all rounded-md hover:transition-all ease-in-out text-xs w-full "
                     >
-                      <div className="flex items-center gap-2 text-sm w-[5%]">
+                      <div className="flex items-center pl-4 gap-2 text-sm w-[5%]">
                         <input
                           type="checkbox"
                           checked={selectedID.includes(item.recordId)}
@@ -975,7 +1069,7 @@ const getSavedqueryData = async (jwtToken) => {
                                   {(() => {
                                     const value = getFieldValue(
                                       item,
-                                      modalItem.value
+                                      modalItem.attribute
                                     );
                                     if (typeof value === "boolean") {
                                       return value ? "True" : "False";
@@ -1009,9 +1103,14 @@ const getSavedqueryData = async (jwtToken) => {
                           : fields.map((field, idx) => (
                               <div
                                 key={idx}
-                                className="flex text-center pl-1 flex-row w-[31%] overflow-hidden text-ellipsis whitespace-nowrap"
+                                className="flex text-center pl-1 flex-row  overflow-hidden text-ellipsis whitespace-nowrap"
+                                style={{
+                                  width: `${87 / fields.length}%`, // Dynamically calculate width
+                                }}
                               >
-                                <span>{getFieldValue(item, field.value)}</span>
+                                <span>
+                                  {getFieldValue(item, field.attribute)}
+                                </span>
                               </div>
                             ))}
                       </div>
@@ -1020,7 +1119,7 @@ const getSavedqueryData = async (jwtToken) => {
                           dispatch(getdeleteElementId(item.recordId));
                           openModal();
                         }}
-                        className="gap-3 w-[5%] flex flex-row "
+                        className=" w-[5%] text-center justify-center  flex flex-row "
                       >
                         <Tooltip
                           arrow
@@ -1053,67 +1152,63 @@ const getSavedqueryData = async (jwtToken) => {
         </div>
       </div>
 
+      <AreUSurepage
+        handleclick={handledelete}
+        aresuremodaltype={aresuremodaltype}
+        aresuremodal={aresuremodal}
+        isOpen={isModalOpen}
+        setIsModalOpen={setIsModalOpen}
+      />
+      <AreUSurepage
+        handleclick={handlemultipledelete}
+        aresuremodaltype={aresuremodaltype}
+        aresuremodal={aresuremodal}
+        isOpen={isMultipleModalOpen}
+        setIsModalOpen={setIsMultipleModalOpen}
+      />
+      <SavedQueries
+        deleteKeyField={deleteKeyField}
+        apiroutepath={apiroutepath}
+        isOpen={savedquery}
+        setIsModalOpen={setsavedquery}
+      />
+      <AdvanceSearch
+        isOpen={isAdvanceSearchModalOpen}
+        handleClose={closeAdvanceSearchModal}
+        deleteKeyField={deleteKeyField}
+        apiroutepath={apiroutepath}
+      />
+      <ExportDownloadModal
+        // handleclick={handleclick}
+        exportDownloadContent={exportDownloadContent}
+        handleClose={closeExportModal}
+        isOpen={isExportModalOpen}
+        setIsModalOpen={setIsExportModalOpen}
+      />
+      <ConfigureListingPages
+        apiroutepath={apiroutepath}
+        handleClose={closeConfigureListingModal}
+        isconfigureOpen={isConfigureListingModal}
+        setIsconfigureModalOpen={setIsConfigureListingModal}
+      />
+      <UploadModal
+        routepath={apiroutepath}
+        isOpen={showUploadModal}
+        setIsModalOpen={setShowUploadModal}
+      />
+      <DetailsSideModal
+        open={modalOpen}
+        handleClose={handleCloseModal}
+        data={modalData}
+        cuurentpagemodelname={cuurentpagemodelname}
+        editnewroutepath={editnewroutepath}
+      />
 
-        <AreUSurepage
-          handleclick={handledelete}
-          aresuremodaltype={aresuremodaltype}
-          aresuremodal={aresuremodal}
-          isOpen={isModalOpen}
-          setIsModalOpen={setIsModalOpen}
-        />
-        <AreUSurepage
-          handleclick={handlemultipledelete}
-          aresuremodaltype={aresuremodaltype}
-          aresuremodal={aresuremodal}
-          isOpen={isMultipleModalOpen}
-          setIsModalOpen={setIsMultipleModalOpen}
-        />
-         <SavedQueries
-          deleteKeyField={deleteKeyField}
-          apiroutepath={apiroutepath}
-          isOpen={savedquery}
-          setIsModalOpen={setsavedquery}
-          
-        />
-        <AdvanceSearch
-          isOpen={isAdvanceSearchModalOpen}
-          handleClose={closeAdvanceSearchModal}
-          deleteKeyField={deleteKeyField}
-          apiroutepath={apiroutepath}
-
-        />
-        <ExportDownloadModal
-          // handleclick={handleclick}
-          exportDownloadContent={exportDownloadContent}
-          handleClose={closeExportModal}
-          isOpen={isExportModalOpen}
-          setIsModalOpen={setIsExportModalOpen}
-        />
-        <ConfigureListingPages
-          apiroutepath={apiroutepath}
-          handleClose={closeConfigureListingModal}
-          isconfigureOpen={isConfigureListingModal}
-          setIsconfigureModalOpen={setIsConfigureListingModal}
-        />
-        <UploadModal
-          routepath={apiroutepath}
-          isOpen={showUploadModal}
-          setIsModalOpen={setShowUploadModal}
-        />
-        <DetailsSideModal
-          open={modalOpen}
-          handleClose={handleCloseModal}
-          data={modalData}
-          cuurentpagemodelname={cuurentpagemodelname}
-          editnewroutepath={editnewroutepath}
-        />
-
-        <AdminEditButton
-          EditModal={editModalOpen}
-          data={data}
-          handleCloseEdit={handleCloseEditModal}
-        />
-     
+      <AdminEditButton
+        EditModal={editModalOpen}
+        data={data}
+        handleCloseEdit={handleCloseEditModal}
+      />
     </div>
   );
 };

@@ -14,6 +14,7 @@ import {
   clearDeleteElementId,
   triggerDeleteSuccess,
   clearAllEditRecordIds,
+  resetAdvanceFilterValue,
 } from "../../Redux/Slice/slice";
 import AdminEditButton from "../modal/AdminEditbutton";
 import { MdOutlineKeyboardDoubleArrowRight } from "react-icons/md";
@@ -34,6 +35,7 @@ import { TbTemplate } from "react-icons/tb";
 import { IoMdCloudUpload } from "react-icons/io";
 import { GrConfigure } from "react-icons/gr";
 import ConfigureListingPages from "../modal/ConfigureListingPages";
+import SavedQueries from "../modal/SavedQueries";
 
 const Listingpage4cols = ({
   fields,
@@ -73,12 +75,18 @@ const Listingpage4cols = ({
   const configureListingPageModal = useSelector(
     (state) => state.tasks.configureListingPageModal
   );
-  useEffect(() => {
-    const jwtToken = getCookie("jwtToken");
-    if (jwtToken) {
-      setToken(jwtToken);
-    }
-  }, []);
+     //advance search implement and skip the save button in advanceSearchInputs
+     const [savedQueryrecordId, setsavedQueryrecordId] = useState([]);
+     const [savedquery, setsavedquery] = useState(false);
+     const advanceSearchInputs = useSelector((state) => state.tasks.advanceSearch);
+     const highlightSearchQuery = useSelector((state) => state.tasks.highlightSearchQuery);
+     useEffect(() => {
+      const jwtToken = getCookie("jwtToken");
+      if (jwtToken) {
+        setToken(jwtToken);
+        getSavedqueryData(jwtToken);
+      }
+    }, [highlightSearchQuery]);
   const openModal = () => {
     setIsModalOpen(true);
   };
@@ -217,7 +225,7 @@ const Listingpage4cols = ({
         dispatch(setMultipleEditRecoedId(recordId)); // Handle double tap action
       }
       // Navigate to the edit route
-      router.push(`/touchmind${editnewroutepath}`);
+      router.push(`/cheil${editnewroutepath}`);
     } else {
      
       // Single tap - set a timeout to distinguish between single and double tap
@@ -349,6 +357,23 @@ const Listingpage4cols = ({
       setError("Error fetching export URL");
     }
   };
+
+
+    //advance search implement and skip the save button in advanceSearchInputs
+console.log(advanceSearchInputs,"advanceSearchInputs advanceSearchInputs advanceSearchInputs");
+const getSavedqueryData = async (jwtToken) => {
+  const headers = { Authorization: `Bearer ${jwtToken}` };
+  const body = {
+    page: 0,
+    sizePerPage: 50,
+  };
+  const response = await axios.post(`${api}/admin/${apiroutepath}`, body, {
+    headers,
+  });
+  const recordIds = response.data.savedQuery?.map((query) => query.recordId);
+  setsavedQueryrecordId(recordIds);
+  console.log(response.data.savedQuery, "savedQuery savedQuery");
+};
 
   return (
     <div className="w-[100%] overflow-hidden flex flex-col px-2 gap-3 pb-5  h-[100%]">
@@ -509,7 +534,7 @@ const Listingpage4cols = ({
               selectedID.length >= 1 ? (
                 <div
                   onClick={() => {
-                    router.push(`/touchmind${editnewroutepath}`);
+                    router.push(`/cheil${editnewroutepath}`);
                   }}
                 >
                   <Tooltip
@@ -651,7 +676,7 @@ const Listingpage4cols = ({
           </div>
           <div
             onClick={() => {
-              router.push(`/touchmind${addnewroutepath}`);
+              router.push(`/cheil${addnewroutepath}`);
             }}
             className=""
           >
@@ -730,7 +755,7 @@ const Listingpage4cols = ({
             onClick={() => {
               setShowUploadModal(true);
             }}
-            // href="/touchmind/admin/trgmapping/add-mapping"
+            // href="/cheil/admin/trgmapping/add-mapping"
             className=""
           >
             <Tooltip
@@ -759,6 +784,43 @@ const Listingpage4cols = ({
         
       </div>
 
+      {advanceSearchInputs?.[deleteKeyField]?.length > 0 ? (
+  <div className="flex flex-row bg-blue-300 text-black font-semibold gap-10 p-2 rounded-md text-xs w-full justify-between items-center">
+    <div>
+      Active Advanced Search :{" "}
+      {advanceSearchInputs[deleteKeyField]
+        .map((dataSource) =>
+          Object.entries(dataSource)
+            .map(([key, value]) => `${key} : ${value}`)
+            .join(", ")
+        )
+        .join(" | ")}{" "}
+      (Operator: {advanceSearchInputs.operator})
+    </div>
+    <div className="flex flex-row gap-7">
+      <div
+        className="bg-red-500 px-3 py-1 text-white rounded-md cursor-pointer"
+        onClick={() => {
+          dispatch(triggerDeleteSuccess());
+          dispatch(clearDeleteElementId());
+          dispatch(resetAdvanceFilterValue());
+        }}
+      >
+        Reset
+      </div>
+      
+      {/* Conditionally render the Save button */}
+      {!savedQueryrecordId.includes(highlightSearchQuery) && (
+        <div
+          onClick={() => setsavedquery(true)}
+          className="bg-green-500 px-3 py-1 text-white rounded-md cursor-pointer"
+        >
+          Save
+        </div>
+      )}
+    </div>
+  </div>
+) : null}
 
       {/* Search bar and inputs */}
       <div className="bg-white  rounded-md ">
@@ -1001,6 +1063,13 @@ const Listingpage4cols = ({
           aresuremodal={aresuremodal}
           isOpen={isModalOpen}
           setIsModalOpen={setIsModalOpen}
+        />
+        <SavedQueries
+          deleteKeyField={deleteKeyField}
+          apiroutepath={apiroutepath}
+          isOpen={savedquery}
+          setIsModalOpen={setsavedquery}
+          
         />
          <AreUSurepage
           handleclick={handlemultipledelete}
