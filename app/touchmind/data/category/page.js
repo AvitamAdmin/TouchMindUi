@@ -7,16 +7,28 @@ import Listingpage3cols from "@/app/src/components/ListingPageComponents/Listing
 import { useDispatch, useSelector } from "react-redux";
 import {
   clearAllEditRecordIds,
+  clearSearchValues,
   resetDeleteStatus,
+  resetPageNumber,
+  setaddressSearchBar,
   setAdvanceFilterValue,
   setConfigureListingPageModal,
+  setFilterInputValueEmpty,
   setPageNumber,
+  setsearchInputField,
 } from "@/app/src/Redux/Slice/slice";
+import { usePathname } from "next/navigation";
 
-const loanType = () => {
+const category = () => {
+  const dispatch = useDispatch();
+  const pathname = usePathname(); // Get current path
+  useEffect(() => {
+    dispatch(setaddressSearchBar(pathname));
+  }, [dispatch, pathname]);
   const [token, setToken] = useState("");
-  const [loanTypes, setloanTypes] = useState([]);
+  const [categorys, setCategorys] = useState([]);
   const [sizePerPage, setSizePerPage] = useState(50);
+  const [attributeList, setAttributeList] = useState([])
   const [totalRecord, setTotalRecord] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -24,16 +36,25 @@ const loanType = () => {
   const fetchFilterInputs = useSelector(
     (state) => state.tasks.fetchFilterInput
   );
-  const dispatch = useDispatch();
   const deleteStatus = useSelector((state) => state.tasks.deleteStatus);
   const currentpageNumber = useSelector((state) => state.tasks.pageNumber);
+  const addressSearchBar = useSelector((state) => state.tasks.addressSearchBar);
 
   const fields = [
-    { label: "Name", value: "name" },
-    { label: "Description", value: "description" },
-    { label: "Status", value: "status" },
+    { label: "Identifier", attribute: "identifier" },
+    { label: "Short Description", attribute: "shortDescription" },
+    { label: "Status", attribute: "status" },
   ];
-
+  
+  useEffect(() => {
+    if(pathname !== addressSearchBar){
+      dispatch(resetPageNumber());
+      dispatch(setFilterInputValueEmpty());
+      dispatch(clearSearchValues()); // Always clear Redux state
+      dispatch(setsearchInputField(false));
+    }
+  }, [pathname, addressSearchBar,])
+  
   useEffect(() => {
     const jwtToken = getCookie("jwtToken");
     if (jwtToken) {
@@ -49,17 +70,14 @@ const loanType = () => {
 
   useEffect(() => {
     if (token) {
-      fetchloanType();
+      fetchCategory();
     }
     if (deleteStatus === "deleted") {
-      fetchloanType();
+      fetchCategory();
       dispatch(resetDeleteStatus()); // Reset deleteStatus after the data is fetched
     }
   }, [token, currentpageNumber, sizePerPage, fetchFilterInputs, deleteStatus]);
 
-<<<<<<< HEAD:app/loanApplication/loans/loanType/page.js
-  const fetchloanType = async () => {
-=======
   const advanceSearchInputs = useSelector((state) => state.tasks.advanceSearch);
 
   useEffect(() => {
@@ -67,46 +85,39 @@ const loanType = () => {
   }, [advanceSearchInputs]);
 
   const fetchCategory = async (isAdvance = false) => {
->>>>>>> d94f52ee6dee3781f0f2597d20dcbe3ce4d0c90e:app/cheil/data/category/page.js
     setLoading(true);
     setError(null); // Reset error before fetching
     try {
       const headers = { Authorization: `Bearer ${token}` };
-<<<<<<< HEAD:app/loanApplication/loans/loanType/page.js
-      const body = {
-        page: currentpageNumber,
-        sizePerPage: sizePerPage === totalRecord ? totalRecord : sizePerPage,
-        // ...(fetchFilterInputs.length === 0 && { page: currentpageNumber }),
-        categories: fetchFilterInputs,
-      };
-      const response = await axios.post(`${api}/loans/loanType`, body, {
-=======
       var body;
       if (isAdvance) {
         body = {
           page:currentpageNumber,
           sizePerPage: sizePerPage === totalRecord ? totalRecord : sizePerPage,
           ...advanceSearchInputs,
+          "node":"/admin/category"
+
         };
       } else {
         body = {
           page:currentpageNumber,
           sizePerPage: sizePerPage === totalRecord ? totalRecord : sizePerPage,
           categories: fetchFilterInputs,
+          "node":"/admin/category"
+
         };
       }
       const response = await axios.post(`${api}/admin/category`, body, {
->>>>>>> d94f52ee6dee3781f0f2597d20dcbe3ce4d0c90e:app/cheil/data/category/page.js
         headers,
       });
-console.log(response,"response from api");
 
-      setloanTypes(response.data.loanTypeDtoList || []);
+      setCategorys(response.data.categories || []);
       setTotalRecord(response.data.totalRecords);
+      setAttributeList(response.data.attributeList || []);
       setTotalPages(response.data.totalPages);
       setLoading(false);
     } catch (err) {
-      setError("Error fetching loanType data");
+      setError("Error fetching category data");
     }
   };
   const handlePageChange = (newPage) => {
@@ -122,9 +133,9 @@ console.log(response,"response from api");
     }
   };
 
-  const addnewroutepath = "/loans/loanType/add-loanType";
-  const breadscrums = "Admin > loanType";
-  const cuurentpagemodelname = "loanType";
+  const addnewroutepath = "/data/category/add-category";
+  const breadscrums = "Admin > category";
+  const cuurentpagemodelname = "category";
   const aresuremodal = "delete this items?";
   const exportDownloadContent = [
     { value: "status", label: "Status" },
@@ -136,9 +147,9 @@ console.log(response,"response from api");
     { value: "identifier", label: "Identifier" },
   ];
   const aresuremodaltype = "Delete";
-  const apiroutepath = "loanType";
-  const deleteKeyField = "loanTypeDtoList";
-  const editnewroutepath = "/loans/loanType/edit-loanType";
+  const apiroutepath = "category";
+  const deleteKeyField = "categories";
+  const editnewroutepath = "/data/category/edit-category";
 
   const startRecord = currentpageNumber * sizePerPage + 1;
   const endRecord = Math.min(startRecord + sizePerPage - 1, totalRecord);
@@ -150,8 +161,8 @@ console.log(response,"response from api");
         cuurentpagemodelname={cuurentpagemodelname}
         breadscrums={breadscrums}
         addnewroutepath={addnewroutepath}
-        fields={fields} // Pass the field configuration
-        data={loanTypes}
+        fields={attributeList.length > 3 ? attributeList : fields} // Pass the field configuration
+        data={categorys}
         currentPage={currentpageNumber}
         sizePerPage={sizePerPage}
         totalPages={totalPages}
@@ -172,4 +183,4 @@ console.log(response,"response from api");
   );
 };
 
-export default loanType;
+export default category;

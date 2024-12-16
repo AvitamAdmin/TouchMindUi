@@ -5,31 +5,51 @@ import { api } from "@/envfile/api";
 import { getCookie } from "cookies-next";
 import Listingpage3cols from "@/app/src/components/ListingPageComponents/Listingpage3cols";
 import { useDispatch, useSelector } from "react-redux";
-import { clearAllEditRecordIds, resetDeleteStatus, setAdvanceFilterValue, setConfigureListingPageModal, setPageNumber } from "@/app/src/Redux/Slice/slice";
+import { clearAllEditRecordIds, clearSearchValues, resetDeleteStatus, resetPageNumber, setaddressSearchBar, setAdvanceFilterValue, setConfigureListingPageModal, setFilterInputValueEmpty, setPageNumber, setsearchInputField } from "@/app/src/Redux/Slice/slice";
+import { usePathname } from "next/navigation";
 
-const notification = () => {
+const environment = () => {
+  const dispatch = useDispatch();
+  const pathname = usePathname(); // Get current path
+  useEffect(() => {
+    dispatch(setaddressSearchBar(pathname));
+  }, [dispatch, pathname]);
+  const addressSearchBar = useSelector((state) => state.tasks.addressSearchBar);
+
   const [token, setToken] = useState("");
-  const [notification, setnotification] = useState([]);
+  const [environments, setEnvironments] = useState([]);
   const [sizePerPage, setSizePerPage] = useState(50);
   const [totalRecord, setTotalRecord] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [attributeList, setAttributeList] = useState([])
+
   const [error, setError] = useState(null);
   const fetchFilterInputs = useSelector(
     (state) => state.tasks.fetchFilterInput
   );
   const fields = [
-    { label: 'Text', value: 'text' },
-    { label: 'Short Description', value: 'shortDescription' },
-    { label: 'Status', value: 'status' },
+    { label: 'Identifier', attribute: 'identifier' },
+    { label: 'Short Description', attribute: 'shortDescription' },
+    { label: 'Status', attribute: 'status' },
     
   ];
-
+  useEffect(() => {
+    if(pathname !== addressSearchBar){
+      dispatch(resetPageNumber());
+      dispatch(setFilterInputValueEmpty());
+      dispatch(clearSearchValues()); // Always clear Redux state
+      dispatch(setsearchInputField(false));
+    }
+  }, [pathname, addressSearchBar,])
+  
+  
   useEffect(() => {
     const jwtToken = getCookie("jwtToken");
     if (jwtToken) {
       setToken(jwtToken);
       dispatch(clearAllEditRecordIds());
+      dispatch(resetPageNumber());
       dispatch(setConfigureListingPageModal([]));
       return () => {
         // dispatch(setAdvanceFilterOperator('and'))
@@ -37,7 +57,6 @@ const notification = () => {
       }
     }
   }, []);
-  const dispatch = useDispatch();
   const deleteStatus = useSelector((state) => state.tasks.deleteStatus);
   const currentpageNumber = useSelector((state) => state.tasks.pageNumber);
 
@@ -63,38 +82,33 @@ const notification = () => {
     setError(null); // Reset error before fetching
     try {
       const headers = { Authorization: `Bearer ${token}` };
-<<<<<<< HEAD:app/loanApplication/admin/notification/page.js
-      const body = {
-        page: currentpageNumber,
-        sizePerPage: sizePerPage === totalRecord ? totalRecord : sizePerPage,
-        notificationDtoList: fetchFilterInputs,
-        // ...(fetchFilterInputs.length === 0 && { page: currentpageNumber }),
-      };
-      const response = await axios.post(`${api}/admin/notification`, body, { headers });
-=======
       var body;
       if (isAdvance) {
         body = {
           page:currentpageNumber,
           sizePerPage: sizePerPage === totalRecord ? totalRecord : sizePerPage,
           ...advanceSearchInputs,
+          "node":"/admin/environment"
+
         };
       } else {
         body = {
           page:currentpageNumber,
           sizePerPage: sizePerPage === totalRecord ? totalRecord : sizePerPage,
           environments: fetchFilterInputs,
+          "node":"/admin/environment"
+
         };
       }
       const response = await axios.post(`${api}/admin/environment`, body, { headers });
->>>>>>> d94f52ee6dee3781f0f2597d20dcbe3ce4d0c90e:app/cheil/admin/environment/page.js
       
-      setnotification(response.data.notificationDtoList || []);
+      setEnvironments(response.data.environments || []);
+      setAttributeList(response.data.attributeList || []);
       setTotalRecord(response.data.totalRecords);
       setTotalPages(response.data.totalPages);
       setLoading(false);
     } catch (err) {
-      setError("Error fetching notification data");
+      setError("Error fetching environment data");
     } 
   };
   
@@ -113,10 +127,10 @@ const notification = () => {
   };
   
 
-  const addnewroutepath = "/admin/notification/add-notification"
-  const breadscrums = "Admin > notification"
-  const cuurentpagemodelname = "notification"
-  const editnewroutepath = "/admin/notification/edit-notification";
+  const addnewroutepath = "/admin/environment/add-environment"
+  const breadscrums = "Admin > environment"
+  const cuurentpagemodelname = "Environment"
+  const editnewroutepath = "/admin/environment/edit-environment";
   const aresuremodal = "delete this items?";
   const exportDownloadContent =  [
     { value: "status", label: "Status" },
@@ -125,10 +139,10 @@ const notification = () => {
     { value: "dataRelation", label: "DataRelation" },
     { value: "subsidiaries", label: "Subsidiaries" },
     { value: "shortDescription", label: "ShortDescription" },
-    { value: "text", label: "text" }
+    { value: "identifier", label: "Identifier" }
   ];  const aresuremodaltype = "Delete";
-  const apiroutepath = "notification";
-  const deleteKeyField = "notificationDtoList";
+  const apiroutepath = "environment";
+  const deleteKeyField = "environments";
 
 
   // Calculate startRecord and endRecord
@@ -142,8 +156,8 @@ const notification = () => {
       cuurentpagemodelname={cuurentpagemodelname}
       breadscrums={breadscrums}
       addnewroutepath={addnewroutepath}
-        fields={fields} // Pass the field configuration
-        data={notification}
+      fields={attributeList.length > 3 ? attributeList : fields} // Pass the field configuration
+      data={environments}
         currentPage={currentpageNumber}
         sizePerPage={sizePerPage}
         totalPages={totalPages}
@@ -164,4 +178,4 @@ const notification = () => {
 };
 
 
-export default notification;
+export default environment;

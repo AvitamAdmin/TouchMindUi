@@ -7,16 +7,30 @@ import Listingpage3cols from "@/app/src/components/ListingPageComponents/Listing
 import { useDispatch, useSelector } from "react-redux";
 import {
   clearAllEditRecordIds,
+  clearSearchValues,
   resetDeleteStatus,
+  resetPageNumber,
+  setaddressSearchBar,
   setAdvanceFilterValue,
   setConfigureListingPageModal,
+  setFilterInputValueEmpty,
   setPageNumber,
+  setsearchInputField,
 } from "@/app/src/Redux/Slice/slice";
+import { usePathname } from "next/navigation";
 
-const loanScoreResult = () => {
+const compiler = () => {
+  const dispatch = useDispatch();
+  const pathname = usePathname(); // Get current path
+  useEffect(() => {
+    dispatch(setaddressSearchBar(pathname));
+  }, [dispatch, pathname]);
+  const addressSearchBar = useSelector((state) => state.tasks.addressSearchBar);
+
   const [token, setToken] = useState("");
-  const [loanScoreResult, setloanScoreResult] = useState([]);
+  const [reportCompilers, setReportCompilers] = useState([]);
   const [sizePerPage, setSizePerPage] = useState(50);
+  const [attributeList, setAttributeList] = useState([])
   const [totalRecord, setTotalRecord] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -24,20 +38,29 @@ const loanScoreResult = () => {
   const fetchFilterInputs = useSelector(
     (state) => state.tasks.fetchFilterInput
   );
-  const dispatch = useDispatch();
   const deleteStatus = useSelector((state) => state.tasks.deleteStatus);
   const currentpageNumber = useSelector((state) => state.tasks.pageNumber);
   const fields = [
-    { label: "Name", value: "name" },
-    { label: "Description", value: "description" },
-    { label: "Status", value: "status" },
+    { label: "Identifier", attribute: "identifier" },
+    { label: "Short Description", attribute: "shortDescription" },
+    { label: "Status", attribute: "status" },
   ];
-
+  useEffect(() => {
+    if(pathname !== addressSearchBar){
+      dispatch(resetPageNumber());
+      dispatch(setFilterInputValueEmpty());
+      dispatch(clearSearchValues()); // Always clear Redux state
+      dispatch(setsearchInputField(false));
+    }
+  }, [pathname, addressSearchBar,])
+  
+  
   useEffect(() => {
     const jwtToken = getCookie("jwtToken");
     if (jwtToken) {
       setToken(jwtToken);
       dispatch(clearAllEditRecordIds());
+      dispatch(resetPageNumber());
       dispatch(setConfigureListingPageModal([]));
       return () => {
         // dispatch(setAdvanceFilterOperator('and'))
@@ -48,68 +71,60 @@ const loanScoreResult = () => {
 
   useEffect(() => {
     if (token) {
-      fetchVariant();
+      fetchReportCompilers();
     }
     if (deleteStatus === "deleted") {
-      fetchVariant();
+      fetchReportCompilers();
       dispatch(resetDeleteStatus()); // Reset deleteStatus after the data is fetched
     }
   }, [token, currentpageNumber, sizePerPage, fetchFilterInputs, deleteStatus]);
   const advanceSearchInputs = useSelector((state) => state.tasks.advanceSearch);
 
-<<<<<<< HEAD:app/loanApplication/loans/loanScoreResult/page.js
-  const fetchVariant = async () => {
-=======
   useEffect(() => {
-    if(token) fetchMessages(true);
+    if(token) fetchReportCompilers(true);
   }, [advanceSearchInputs]);
-  const fetchMessages = async (isAdvance = false)  => {
->>>>>>> d94f52ee6dee3781f0f2597d20dcbe3ce4d0c90e:app/cheil/admin/messages/page.js
+
+  const fetchReportCompilers = async (isAdvance = false) => {
     setLoading(true);
     setError(null); // Reset error before fetching
     try {
       const headers = { Authorization: `Bearer ${token}` };
-<<<<<<< HEAD:app/loanApplication/loans/loanScoreResult/page.js
-      const body = {
-        page: currentpageNumber,
-        sizePerPage: sizePerPage === totalRecord ? totalRecord : sizePerPage,
-        // ...(fetchFilterInputs.length === 0 && { page: currentpageNumber }),
-        loanScoreDtos: fetchFilterInputs,
-      };
-      const response = await axios.post(`${api}/loans/loanScoreResult`, body, {
-=======
       var body;
       if (isAdvance) {
         body = {
           page:currentpageNumber,
           sizePerPage: sizePerPage === totalRecord ? totalRecord : sizePerPage,
           ...advanceSearchInputs,
+          "node":"/admin/reportCompiler"
+
         };
       } else {
         body = {
           page:currentpageNumber,
           sizePerPage: sizePerPage === totalRecord ? totalRecord : sizePerPage,
-          messageResources: fetchFilterInputs,
+          reportCompilers: fetchFilterInputs,
+          "node":"/admin/reportCompiler"
+
         };
       }
-      const response = await axios.post(`${api}/admin/messages`, body, {
->>>>>>> d94f52ee6dee3781f0f2597d20dcbe3ce4d0c90e:app/cheil/admin/messages/page.js
+
+      const response = await axios.post(`${api}/admin/reportCompiler`, body, {
         headers,
       });
 
-      setloanScoreResult(response.data.loanScoreDtos || []);
+      setReportCompilers(response.data.reportCompilers || []);
       setTotalRecord(response.data.totalRecords);
+      setAttributeList(response.data.attributeList || []);
       setTotalPages(response.data.totalPages);
       setLoading(false);
     } catch (err) {
-      setError("Error fetching loanScoreResult data");
+      setError("Error fetching reportCompiler data");
     }
   };
 
   const handlePageChange = (newPage) => {
     dispatch(setPageNumber(newPage));
   };
-
   const handleSizeChange = (event) => {
     const selectedSize = event.target.value;
     if (selectedSize === "all") {
@@ -119,9 +134,10 @@ const loanScoreResult = () => {
     }
   };
 
-  const addnewroutepath = "/loans/loanScoreResult/add-loanScoreResult";
-  const breadscrums = "Admin > loanScoreResult";
-  const cuurentpagemodelname = "loanScoreResult";
+  const addnewroutepath = "/admin/reportCompiler/add-compiler";
+  const breadscrums = "Admin > Compiler";
+  const cuurentpagemodelname = "ReportCompiler";
+  const editnewroutepath = "/admin/reportCompiler/edit-reportCompiler";
   const aresuremodal = "delete this items?";
   const exportDownloadContent = [
     { value: "status", label: "Status" },
@@ -133,9 +149,8 @@ const loanScoreResult = () => {
     { value: "identifier", label: "Identifier" },
   ];
   const aresuremodaltype = "Delete";
-  const apiroutepath = "loanScoreResult";
-  const deleteKeyField = "loanScoreDtos";
-  const editnewroutepath = "/loans/loanScoreResult/edit-loanScoreResult";
+  const apiroutepath = "reportCompiler";
+  const deleteKeyField = "reportCompilers";
 
   const startRecord = currentpageNumber * sizePerPage + 1;
   const endRecord = Math.min(startRecord + sizePerPage - 1, totalRecord);
@@ -147,8 +162,8 @@ const loanScoreResult = () => {
         cuurentpagemodelname={cuurentpagemodelname}
         breadscrums={breadscrums}
         addnewroutepath={addnewroutepath}
-        fields={fields} // Pass the field configuration
-        data={loanScoreResult}
+        fields={attributeList.length > 3 ? attributeList : fields} // Pass the field configuration
+        data={reportCompilers}
         currentPage={currentpageNumber}
         sizePerPage={sizePerPage}
         totalPages={totalPages}
@@ -160,13 +175,13 @@ const loanScoreResult = () => {
         endRecord={endRecord} // Pass calculated endRecord
         aresuremodal={aresuremodal}
         aresuremodaltype={aresuremodaltype}
+        editnewroutepath={editnewroutepath}
         apiroutepath={apiroutepath}
         exportDownloadContent={exportDownloadContent}
         deleteKeyField={deleteKeyField}
-        editnewroutepath={editnewroutepath}
       />
     </div>
   );
 };
 
-export default loanScoreResult;
+export default compiler;
